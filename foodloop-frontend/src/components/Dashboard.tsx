@@ -230,45 +230,59 @@ export default function Dashboard() {
 
         {/* --- TAB 2: DONATIONS VIEW --- */}
         {activeTab === 'donations' && (
-  <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 animate-in slide-in-from-bottom-4">
-    <div className="flex items-center gap-4 mb-8">
-      <div className="bg-purple-100 p-3 rounded-2xl">
-        <Gift className="h-8 w-8 text-purple-600" />
+  <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+    {/* Section 1: Partner Food Banks (Directory) */}
+    <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="bg-green-100 p-2 rounded-xl text-green-600"><Truck size={24} /></div>
+        <h2 className="text-2xl font-black text-gray-800">Partner Food Banks</h2>
       </div>
-      <div>
-        <h2 className="text-3xl font-black text-gray-800">Donation History</h2>
-        <p className="text-gray-500 font-medium">Items redirected to community food banks</p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* We use the SAMPLE_FOOD_BANKS data here */}
+        {[
+          { name: 'Food Bank India', location: 'Mumbai, MH', dist: '3 km' },
+          { name: 'Hope Society', location: 'Mumbai, MH', dist: '5 km' },
+          { name: 'Food for All NGO', location: 'Mumbai, MH', dist: '8 km' }
+        ].map((bank, i) => (
+          <div key={i} className="p-5 bg-gray-50 rounded-3xl border border-gray-100">
+            <p className="font-black text-gray-800">{bank.name}</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">{bank.dist} • {bank.location}</p>
+            <div className="mt-4 flex gap-2">
+              <span className="bg-white px-3 py-1 rounded-full text-[10px] font-black text-green-600 border border-green-100">ACTIVE</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
 
-    {donations.length > 0 ? (
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">
-              <th className="pb-4">Product</th>
-              <th className="pb-4">Food Bank</th>
-              <th className="pb-4">Quantity</th>
-              <th className="pb-4 text-right">Date</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {donations.map((d) => (
-              <tr key={d.id} className="group hover:bg-gray-50/50 transition-colors">
-                <td className="py-4 font-bold text-gray-800">{d.productName || 'Unknown Product'}</td>
-                <td className="py-4 text-gray-600 font-medium">{d.foodBankName || 'General Bank'}</td>
-                <td className="py-4"><span className="bg-purple-50 text-purple-600 px-3 py-1 rounded-full text-xs font-black">{d.quantity} units</span></td>
-                <td className="py-4 text-right text-gray-400 text-sm font-medium">{new Date(d.createdAt).toLocaleDateString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    {/* Section 2: Donation History */}
+    <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="bg-purple-100 p-2 rounded-xl text-purple-600"><Gift size={24} /></div>
+        <h2 className="text-2xl font-black text-gray-800">Recent Donations</h2>
       </div>
-    ) : (
-      <div className="text-center py-20 bg-gray-50 rounded-[30px] border-2 border-dashed border-gray-200">
-        <p className="text-gray-400 font-bold italic">No donations recorded this cycle.</p>
-      </div>
-    )}
+
+      {donations.length > 0 ? (
+        <div className="space-y-3">
+          {donations.map((d) => (
+            <div key={d.id} className="p-5 bg-gray-50 rounded-3xl flex justify-between items-center group hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-100">
+              <div>
+                <p className="font-black text-gray-800">{d.productName}</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase">{new Date(d.createdAt).toLocaleDateString()} • {d.foodBankName}</p>
+              </div>
+              <div className="text-right">
+                <span className="bg-purple-100 text-purple-600 px-4 py-2 rounded-full font-black text-xs">+{d.quantity} UNITS</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-16 bg-gray-50 rounded-[30px] border-2 border-dashed border-gray-200">
+          <p className="text-gray-400 font-bold italic">No donations recorded yet. Start by clicking 'Donate' in Inventory.</p>
+        </div>
+      )}
+    </div>
   </div>
 )}
         {/* --- TAB 3: ANALYTICS VIEW (Manager Dashboard) --- */}
@@ -349,4 +363,5 @@ export default function Dashboard() {
     onSuccess={handleDonationSuccess} 
   />
 )}
+
 
