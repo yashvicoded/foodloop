@@ -38,6 +38,8 @@ const SAMPLE_FOOD_BANKS: FoodBank[] = [
 ];
 
 export default function DonationModal({ product, onClose, onSuccess }: DonationModalProps) {
+  const safeQuantity = product.quantity || 1;
+  const safePrice = product.originalPrice || 0;
   const [foodBanks, setFoodBanks] = useState<FoodBank[]>(SAMPLE_FOOD_BANKS);
   const [quantity, setQuantity] = useState(product.quantity);
   const [selectedFoodBank, setSelectedFoodBank] = useState<FoodBank | null>(null);
@@ -75,144 +77,72 @@ export default function DonationModal({ product, onClose, onSuccess }: DonationM
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
-          <h2 className="text-2xl font-bold text-gray-800">🎁 Donate Product</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <X size={24} />
+    
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-[32px] max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="p-8 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white/80 backdrop-blur-md">
+          <h2 className="text-2xl font-black text-gray-800 flex items-center gap-2">
+            <span className="bg-purple-100 p-2 rounded-xl text-xl">🎁</span> Donate Product
+          </h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X size={24} className="text-gray-400" />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="p-6 space-y-6">
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded">
-              {error}
-            </div>
-          )}
+        <div className="p-8 space-y-8">
+          {error && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-r-xl font-bold">{error}</div>}
 
-          {/* Product Details */}
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-800 mb-3">📦 Product Details</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Name:</span>
-                <span className="font-semibold text-gray-800">{product.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Category:</span>
-                <span className="font-semibold text-gray-800">{product.category}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Expiry Date:</span>
-                <span className="font-semibold text-gray-800">
-                  {new Date(product.expiryDate).toLocaleDateString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Original Value:</span>
-                <span className="font-semibold text-gray-800">
-                  ₹{product.originalPrice.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total Value:</span>
-                <span className="font-bold text-green-600">
-                  ₹{(product.originalPrice * quantity).toFixed(2)}
-                </span>
-              </div>
+          <div className="bg-blue-50/50 rounded-3xl p-6 border border-blue-100">
+            <h3 className="font-black text-blue-800 uppercase text-xs tracking-widest mb-4">Product Details</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm font-bold">
+              <div className="text-gray-400">Name: <span className="text-gray-800">{product.name}</span></div>
+              <div className="text-gray-400">Total Value: <span className="text-green-600">₹{(unitPrice * quantity).toFixed(2)}</span></div>
             </div>
           </div>
 
-          {/* Quantity Selection */}
-          <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
-            <label className="block font-semibold text-gray-800 mb-3">
-              <Package size={16} className="inline mr-2" />
-              Quantity to Donate (Available: {product.quantity})
+          <div className="space-y-4">
+            <label className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+              <Package size={16} /> Quantity (Available: {initialQuantity})
             </label>
             <input
               type="number"
               min="1"
-              max={product.quantity}
+              max={initialQuantity}
               value={quantity}
-              onChange={(e) => setQuantity(Math.min(parseInt(e.target.value) || 1, product.quantity))}
-              className="w-full px-4 py-2 border-2 border-amber-300 rounded-lg focus:border-amber-500 focus:outline-none"
+              onChange={(e) => setQuantity(Math.min(parseInt(e.target.value) || 1, initialQuantity))}
+              className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-purple-500 focus:outline-none font-bold text-lg"
             />
           </div>
 
-          {/* Food Bank Selection */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Food Bank</h3>
-            <div className="space-y-3">
+          <div className="space-y-4">
+            <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest">Select Nearest Food Bank</h3>
+            <div className="grid gap-3">
               {foodBanks.map((bank) => (
                 <button
                   key={bank.id}
                   onClick={() => setSelectedFoodBank(bank)}
-                  className={`w-full border-2 rounded-lg p-4 text-left transition-all ${
-                    selectedFoodBank?.id === bank.id
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-200 hover:border-green-500'
+                  className={`p-5 rounded-3xl border-2 text-left transition-all flex justify-between items-center ${
+                    selectedFoodBank?.id === bank.id ? 'border-purple-500 bg-purple-50' : 'border-gray-100 hover:border-purple-200'
                   }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-bold text-gray-800">{bank.name}</h4>
-                      <div className="space-y-1 text-sm text-gray-600 mt-2">
-                        <div className="flex items-center gap-2">
-                          <MapPin size={16} className="text-gray-400" />
-                          <span>{bank.distance} km away</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Package size={16} className="text-gray-400" />
-                          <span>Capacity: {bank.capacity}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Truck size={16} className="text-gray-400" />
-                          <span>{bank.contact}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className={`w-5 h-5 rounded-full border-2 mt-1 ${
-                      selectedFoodBank?.id === bank.id
-                        ? 'border-green-500 bg-green-500'
-                        : 'border-gray-300'
-                    }`} />
+                  <div>
+                    <p className="font-black text-gray-800">{bank.name}</p>
+                    <p className="text-xs text-gray-400 font-bold uppercase">{bank.distance} km • {bank.location}</p>
                   </div>
+                  <div className={`w-6 h-6 rounded-full border-4 ${selectedFoodBank?.id === bank.id ? 'border-purple-500 bg-white' : 'border-gray-100'}`} />
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 border-t border-gray-200 pt-6">
-            <button
-              onClick={onClose}
-              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-3 rounded-lg font-semibold transition-colors"
-            >
-              Cancel
-            </button>
+          <div className="flex gap-4 pt-4">
+            <button onClick={onClose} className="flex-1 py-4 rounded-2xl font-bold text-gray-400 hover:bg-gray-50 transition-all">Cancel</button>
             <button
               onClick={handleDonate}
               disabled={isProcessing || !selectedFoodBank}
-              className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
+              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-2xl font-bold shadow-lg shadow-purple-200 transition-all flex items-center justify-center gap-2 disabled:bg-gray-200"
             >
-              {isProcessing ? (
-                <>
-                  <Loader className="animate-spin" size={20} />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Truck size={20} />
-                  Confirm Donation
-                </>
-              )}
+              {isProcessing ? <Loader className="animate-spin" size={20} /> : <><Truck size={20} /> Confirm Donation</>}
             </button>
           </div>
         </div>
