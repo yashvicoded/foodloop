@@ -11,6 +11,7 @@ import ProductForm from './ProductForm';
 import DonationModal from './DonationModal';
 
 export default function Dashboard() {
+  const [donations, setDonations] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'products' | 'donations' | 'analytics'>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [dashboard, setDashboard] = useState<DashboardType | null>(null);
@@ -27,29 +28,32 @@ export default function Dashboard() {
   }, []);
 
   const fetchAllData = async () => {
-    try {
-      setLoading(true);
-      const [productsRes, dashboardRes] = await Promise.all([
-        productAPI.getAll(),
-        analyticsAPI.getDashboard(),
-      ]);
-      
-      const productsWithDates = productsRes.data.data.map((p: any) => ({
-        ...p,
-        expiryDate: new Date(p.expiryDate),
-      }));
-      
-      setProducts(productsWithDates);
-      setDashboard(dashboardRes.data.data);
-      setErrorMessage('');
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setErrorMessage('Failed to load data. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  try {
+    setLoading(true);
+    // Fetch products, analytics, AND donation history together
+    const [productsRes, dashboardRes, donationsRes] = await Promise.all([
+      productAPI.getAll(),
+      analyticsAPI.getDashboard(),
+      donationAPI.getHistory(), // Added this
+    ]);
+    
+    const productsWithDates = productsRes.data.data.map((p: any) => ({
+      ...p,
+      expiryDate: new Date(p.expiryDate),
+    }));
+    
+    setProducts(productsWithDates);
+    setDashboard(dashboardRes.data.data);
+    setDonations(donationsRes.data.data); // Save donation history
+    setErrorMessage('');
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    setErrorMessage('Failed to load data. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
+  
   const handleAddProduct = async (productData: any) => {
     try {
       await productAPI.add(productData);
@@ -228,16 +232,47 @@ export default function Dashboard() {
 
         {/* --- TAB 2: DONATIONS VIEW --- */}
         {activeTab === 'donations' && (
-          <div className="bg-white p-12 rounded-[40px] shadow-sm border border-gray-100 animate-in slide-in-from-bottom-4">
-             <div className="text-center max-w-md mx-auto">
-                <Gift className="mx-auto h-16 w-16 text-purple-400 mb-4" />
-                <h2 className="text-3xl font-black text-gray-800">Donation History</h2>
-                <p className="text-gray-500 mt-2">View items redirected to community food banks to prevent waste.</p>
-                <div className="mt-8 p-6 bg-gray-50 rounded-2xl italic text-gray-400">No donations recorded this cycle.</div>
-             </div>
-          </div>
-        )}
+  <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 animate-in slide-in-from-bottom-4">
+    <div className="flex items-center gap-4 mb-8">
+      <div className="bg-purple-100 p-3 rounded-2xl">
+        <Gift className="h-8 w-8 text-purple-600" />
+      </div>
+      <div>
+        <h2 className="text-3xl font-black text-gray-800">Donation History</h2>
+        <p className="text-gray-500 font-medium">Items redirected to community food banks</p>
+      </div>
+    </div>
 
+    {donations.length > 0 ? (
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">
+              <th className="pb-4">Product</th>
+              <th className="pb-4">Food Bank</th>
+              <th className="pb-4">Quantity</th>
+              <th className="pb-4 text-right">Date</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {donations.map((d) => (
+              <tr key={d.id} className="group hover:bg-gray-50/50 transition-colors">
+                <td className="py-4 font-bold text-gray-800">{d.productName || 'Unknown Product'}</td>
+                <td className="py-4 text-gray-600 font-medium">{d.foodBankName || 'General Bank'}</td>
+                <td className="py-4"><span className="bg-purple-50 text-purple-600 px-3 py-1 rounded-full text-xs font-black">{d.quantity} units</span></td>
+                <td className="py-4 text-right text-gray-400 text-sm font-medium">{new Date(d.createdAt).toLocaleDateString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    ) : (
+      <div className="text-center py-20 bg-gray-50 rounded-[30px] border-2 border-dashed border-gray-200">
+        <p className="text-gray-400 font-bold italic">No donations recorded this cycle.</p>
+      </div>
+    )}
+  </div>
+)}
         {/* --- TAB 3: ANALYTICS VIEW (Manager Dashboard) --- */}
         {activeTab === 'analytics' && dashboard && (
           <div className="space-y-8 animate-in zoom-in duration-500">
@@ -309,4 +344,5 @@ export default function Dashboard() {
       {selectedProduct && <DonationModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onSuccess={handleDonationSuccess} />}
     </div>
   );
+
 }
