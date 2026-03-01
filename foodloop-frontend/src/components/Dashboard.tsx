@@ -30,11 +30,10 @@ export default function Dashboard() {
   const fetchAllData = async () => {
   try {
     setLoading(true);
-    // Fetch products, analytics, AND donation history together
     const [productsRes, dashboardRes, donationsRes] = await Promise.all([
       productAPI.getAll(),
       analyticsAPI.getDashboard(),
-      donationAPI.getHistory(), // Added this
+      donationAPI.getHistory(), // Connect to your backend route
     ]);
     
     const productsWithDates = productsRes.data.data.map((p: any) => ({
@@ -42,13 +41,12 @@ export default function Dashboard() {
       expiryDate: new Date(p.expiryDate),
     }));
     
-    setProducts(productsWithDates);
+  setProducts(productsWithDates);
     setDashboard(dashboardRes.data.data);
-    setDonations(donationsRes.data.data); // Save donation history
+    setDonations(donationsRes.data.data || []); // Save history to state
     setErrorMessage('');
   } catch (error) {
-    console.error('Error fetching data:', error);
-    setErrorMessage('Failed to load data. Please try again.');
+    setErrorMessage('Failed to load project data.');
   } finally {
     setLoading(false);
   }
@@ -346,3 +344,4 @@ export default function Dashboard() {
   );
 
 }
+
