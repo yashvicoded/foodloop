@@ -29,18 +29,28 @@ export class AnalyticsController {
 
       productsSnapshot.forEach(doc => {
         const data = doc.data();
-        const rawExpiry = data.expiryDate;
+        let expiryDate: Date | null = null;
+        if (data.expiryDate && typeof data.expiryDate.toDate === 'function') {
+          expiryDate = data.expiryDate.toDate();
+        } else if (typeof data.expiryDate === 'string') {
+          expiryDate = new Date(data.expiryDate);
+        }
 
-        const expiryDate =
-          rawExpiry?.toDate
-            ? rawExpiry.toDate()
-            : new Date(rawExpiry);
-
-        products.push({
-          id: doc.id,
-          ...data,
-          expiryDate,
-        } as Product);
+        const originalPrice = Number(data.originalPrice);
+        if (expiryDate && !isNaN(expiryDate.getTime()) && originalPrice > 0) {
+          products.push({
+            id: doc.id,
+            storeId: data.storeId || '',
+            name: data.name || 'Unknown',
+            category: data.category || 'General',
+            expiryDate,
+            originalPrice,
+            currentPrice: Number(data.currentPrice) || originalPrice,
+            isDiscounted: Boolean(data.isDiscounted),
+            quantity: Number(data.quantity) || 1,
+            lastUpdated: data.lastUpdated?.toDate?.() || new Date(),
+          });
+        }
       });
 
       // Fetch donations
@@ -54,17 +64,22 @@ export class AnalyticsController {
       donationsSnapshot.forEach(doc => {
         const data = doc.data();
 
-        const donatedAt =
-          data.donatedAt?.toDate
-            ? data.donatedAt.toDate()
-            : data.donatedAt
-            ? new Date(data.donatedAt)
-            : null;
+        // Use createdAt (the actual Firestore field) — donatedAt does NOT exist
+        let createdAt: Date | null = null;
+        if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+          createdAt = data.createdAt.toDate();
+        } else if (data.createdAt?._seconds) {
+          createdAt = new Date(data.createdAt._seconds * 1000);
+        } else if (data.createdAt) {
+          createdAt = new Date(data.createdAt);
+        }
 
         donations.push({
           id: doc.id,
           ...data,
-          donatedAt,
+          createdAt,
+          quantity: Number(data.quantity) || 1,
+          donatedValue: Number(data.donatedValue) || 0,
         });
       });
 
@@ -76,7 +91,7 @@ export class AnalyticsController {
       weekAgo.setDate(weekAgo.getDate() - 7);
 
       const thisWeekDonations = donations.filter(
-        d => d.donatedAt && d.donatedAt > weekAgo
+        d => d.createdAt && d.createdAt > weekAgo
       );
 
       const dashboard = {
@@ -106,6 +121,10 @@ export class AnalyticsController {
             0
           ),
           total: donations.length,
+          totalQuantity: donations.reduce(
+            (sum, d) => sum + (d.quantity || 0),
+            0
+          ),
         },
         revenue: {
           recovered:
@@ -168,17 +187,21 @@ export class AnalyticsController {
       donationsSnapshot.forEach(doc => {
         const data = doc.data();
 
-        const donatedAt =
-          data.donatedAt?.toDate
-            ? data.donatedAt.toDate()
-            : data.donatedAt
-            ? new Date(data.donatedAt)
-            : null;
+        let createdAt: Date | null = null;
+        if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+          createdAt = data.createdAt.toDate();
+        } else if (data.createdAt?._seconds) {
+          createdAt = new Date(data.createdAt._seconds * 1000);
+        } else if (data.createdAt) {
+          createdAt = new Date(data.createdAt);
+        }
 
         donations.push({
           id: doc.id,
           ...data,
-          donatedAt,
+          createdAt,
+          quantity: Number(data.quantity) || 1,
+          donatedValue: Number(data.donatedValue) || 0,
         });
       });
 
@@ -235,18 +258,28 @@ export class AnalyticsController {
 
       productsSnapshot.forEach(doc => {
         const data = doc.data();
-        const rawExpiry = data.expiryDate;
+        let expiryDate: Date | null = null;
+        if (data.expiryDate && typeof data.expiryDate.toDate === 'function') {
+          expiryDate = data.expiryDate.toDate();
+        } else if (typeof data.expiryDate === 'string') {
+          expiryDate = new Date(data.expiryDate);
+        }
 
-        const expiryDate =
-          rawExpiry?.toDate
-            ? rawExpiry.toDate()
-            : new Date(rawExpiry);
-
-        products.push({
-          id: doc.id,
-          ...data,
-          expiryDate,
-        } as Product);
+        const originalPrice = Number(data.originalPrice);
+        if (expiryDate && !isNaN(expiryDate.getTime()) && originalPrice > 0) {
+          products.push({
+            id: doc.id,
+            storeId: data.storeId || '',
+            name: data.name || 'Unknown',
+            category: data.category || 'General',
+            expiryDate,
+            originalPrice,
+            currentPrice: Number(data.currentPrice) || originalPrice,
+            isDiscounted: Boolean(data.isDiscounted),
+            quantity: Number(data.quantity) || 1,
+            lastUpdated: data.lastUpdated?.toDate?.() || new Date(),
+          });
+        }
       });
 
       const discountedProducts =
@@ -277,9 +310,11 @@ export class AnalyticsController {
     } = {};
 
     donations.forEach(d => {
-      if (!d.donatedAt) return;
+      if (!d.createdAt) return;
 
-      const date = new Date(d.donatedAt);
+      const date = new Date(d.createdAt);
+      if (isNaN(date.getTime())) return;
+
       const weekStart = new Date(date);
       weekStart.setDate(date.getDate() - date.getDay());
       const weekKey = weekStart.toISOString().split('T')[0];

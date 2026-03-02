@@ -14,6 +14,7 @@ export class DonationController {
         storeId: req.user?.uid,
         status: 'PENDING',
         createdAt: new Date(),
+        donatedAt: new Date(),
       };
 
       // 1. Add to Donation History

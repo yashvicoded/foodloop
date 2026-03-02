@@ -6,8 +6,18 @@ export class ProductController {
   // 1. ADD PRODUCT
   static async addProduct(req: AuthRequest, res: Response) {
     try {
+      const { name, category, expiryDate, originalPrice, quantity } = req.body;
+      const price = Number(originalPrice);
+      const qty = Number(quantity) || 1;
+
       const product = {
-        ...req.body,
+        name,
+        category: category || 'General',
+        expiryDate,                    // stored as string "YYYY-MM-DD"
+        originalPrice: price,
+        currentPrice: price,           // initially same as originalPrice
+        isDiscounted: false,
+        quantity: qty,
         storeId: req.user?.uid,
         createdAt: new Date(),
       };

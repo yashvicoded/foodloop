@@ -33,14 +33,20 @@ export class DiscountEngine {
     'Canned': 0.5,
   };
 
-  static calculateDaysToExpiry(expiryDate: Date): number {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const expiry = new Date(expiryDate);
-    expiry.setHours(0, 0, 0, 0);
-    const diffTime = expiry.getTime() - today.getTime();
+  static calculateDaysToExpiry(expiryDate: any): number {
+  try {
+    const now = new Date();
+    // Force the input into a Date object, even if it's a Firebase Timestamp or String
+    const expiry = expiryDate instanceof Date ? expiryDate : new Date(expiryDate?.toDate?.() || expiryDate);
+    
+    if (isNaN(expiry.getTime())) return 999; // Fallback for bad data
+    
+    const diffTime = expiry.getTime() - now.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  } catch (e) {
+    return 999; 
   }
+}
 
   static calculateDiscount(product: Product): DiscountResult {
     const daysLeft = this.calculateDaysToExpiry(product.expiryDate);
