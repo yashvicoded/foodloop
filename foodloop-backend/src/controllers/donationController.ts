@@ -4,16 +4,32 @@ import { AuthRequest } from '../middleware/auth';
 
 export class DonationController {
   // 1. Record a Donation
+  // 1. Record a Donation & Remove from Inventory
   static async recordDonation(req: AuthRequest, res: Response) {
     try {
+      const { productId, quantity, productName } = req.body; // Ensure frontend sends these
+
       const donation = {
         ...req.body,
         storeId: req.user?.uid,
         status: 'PENDING',
         createdAt: new Date(),
       };
+
+      // 1. Add to Donation History
       const docRef = await db.collection('donations').add(donation);
-      res.status(201).json({ success: true, id: docRef.id });
+
+      // 2. CRITICAL FIX: Delete the product from the products collection
+      // This is why "Item 2" wasn't disappearing!
+      if (productId) {
+        await db.collection('products').doc(productId).delete();
+      }
+
+      res.status(201).json({ 
+        success: true, 
+        id: docRef.id, 
+        message: "Donation recorded and inventory updated" 
+      });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
