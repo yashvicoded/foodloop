@@ -56,14 +56,11 @@ export class AnalyticsController {
       // Fetch donations correctly filtered
       const last7Days = new Date();
       last7Days.setDate(last7Days.getDate() - 7);
-      const last7DaysTimestamp = admin.firestore.Timestamp.fromDate(last7Days);
 
-      let donationsQuery: FirebaseFirestore.Query = db.collection('donations');
-      // TEMPORARILY REMOVED storeId FILTER FOR DEVELOPMENT TO ENSURE SEEDED DATA SHOWS UP
-      // donationsQuery = donationsQuery.where('storeId', '==', storeId); 
-      donationsQuery = donationsQuery.where('status', '==', 'COMPLETED');
-
-      const donationsSnapshot = await donationsQuery.get();
+      const donationsSnapshot = await db
+        .collection('donations')
+        .where('status', '==', 'COMPLETED')
+        .get();
 
       // Filter by date in memory to avoid failing due to missing composite index in Firebase
       const recentDonations = donationsSnapshot.docs.filter((doc) => {
