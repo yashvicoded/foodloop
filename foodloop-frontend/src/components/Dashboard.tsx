@@ -37,28 +37,29 @@ export default function Dashboard() {
       ]);
 
       // Convert Firestore Timestamps to JS Dates for products
-      const productsWithDates = productsRes.data.data.map((p: any) => {
-        // THE FIX: Logic belongs inside { } with a 'return'
-        let dateObj;
+      // Inside fetchAllData in Dashboard.tsx
+const productsWithDates = productsRes.data.data.map((p: any) => {
+  let dateObj;
+  
+  // Handle the Firebase Timestamp format (_seconds) or standard strings
+  if (p.expiryDate && typeof p.expiryDate === 'object' && p.expiryDate._seconds) {
+    dateObj = new Date(p.expiryDate._seconds * 1000);
+  } else if (p.expiryDate) {
+    dateObj = new Date(p.expiryDate);
+  } else {
+    dateObj = new Date(); // Fallback to today if null
+  }
 
-        // Handle Firebase Timestamps (_seconds) or standard date strings
-        if (p.expiryDate && typeof p.expiryDate === 'object' && p.expiryDate._seconds) {
-          dateObj = new Date(p.expiryDate._seconds * 1000);
-        } else {
-          dateObj = new Date(p.expiryDate);
-        }
-
-        // Explicit return of the object
-        return {
-          ...p,
-          expiryDate: dateObj,
-          originalPrice: Number(p.originalPrice) || 0,
-          currentPrice: Number(p.currentPrice) || Number(p.originalPrice) || 0,
-          isDiscounted: Boolean(p.isDiscounted),
-          quantity: Number(p.quantity) || 1,
-          discountPercent: p.discountPercent ? Number(p.discountPercent) : undefined,
-        };
-      }); // Closing the map correctly now
+  return {
+    ...p,
+    expiryDate: dateObj,
+    originalPrice: Number(p.originalPrice) || 0,
+    currentPrice: Number(p.currentPrice) || Number(p.originalPrice) || 0,
+    isDiscounted: Boolean(p.isDiscounted),
+    quantity: Number(p.quantity) || 1,
+    discountPercent: p.discountPercent ? Number(p.discountPercent) : 0,
+  };
+});
 
       setProducts(productsWithDates);
       setDashboard(dashboardRes.data.data);
@@ -183,6 +184,36 @@ export default function Dashboard() {
     setSelectedProduct(null);
   };
 
+  // Calculate local impact from the donations array so analytics aren't zero
+const localImpact = React.useMemo(() => {
+  const totalUnits = donations.reduce((sum, d) => sum + (Number(d.quantity) || 0), 0);
+  return {
+    thisWeek: donations.length,
+    waste: (totalUnits * 0.5).toFixed(1), // 0.5kg per unit
+    carbon: (totalUnits * 1.25).toFixed(1) // 1.25kg CO2 per unit
+  };
+}, [donations]);
+
+// This calculates the analytics locally so they update IMMEDIATELY
+const liveAnalytics = React.useMemo(() => {
+  const allDonations = donations || [];
+  
+  // 1. Total items donated
+  const count = allDonations.length;
+  
+  // 2. Total units of food (sum of quantity field)
+  const totalUnits = allDonations.reduce((sum, d) => sum + (Number(d.quantity) || 0), 0);
+  
+  // 3. Total value (Profit Recovered)
+  const profit = allDonations.reduce((sum, d) => sum + (Number(d.donatedValue) || 0), 0);
+  
+  // 4. Environmental Math (Fun metrics)
+  const wasteKg = totalUnits * 0.5; // Assuming 0.5kg per unit
+  const co2Kg = wasteKg * 2.5;     // 1kg waste = 2.5kg CO2 saved
+
+  return { count, profit, wasteKg, co2Kg };
+}, [donations]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -250,31 +281,23 @@ export default function Dashboard() {
               <ProductForm onAdd={handleAddProduct} />
             </div>
 
+            
             {/* Quick Summary Cards */}
-            {dashboard && (
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-                  <p className="text-xs font-bold text-gray-400 uppercase">Total</p>
-                  <p className="text-3xl font-black text-blue-600">{dashboard.inventory.total}</p>
-                </div>
-                <div className="bg-red-50 border border-red-100 rounded-2xl p-4 shadow-sm text-red-600">
-                  <p className="text-xs font-bold uppercase">Urgent</p>
-                  <p className="text-3xl font-black">{dashboard.inventory.urgent}</p>
-                </div>
-                <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4 shadow-sm text-orange-600">
-                  <p className="text-xs font-bold uppercase">Warning</p>
-                  <p className="text-3xl font-black">{dashboard.inventory.warning}</p>
-                </div>
-                <div className="bg-green-50 border border-green-100 rounded-2xl p-4 shadow-sm text-green-600">
-                  <p className="text-xs font-bold uppercase">Recovered</p>
-                  <p className="text-3xl font-black">₹{Math.round(dashboard.revenue.recovered)}</p>
-                </div>
-                <div className="bg-purple-50 border border-purple-100 rounded-2xl p-4 shadow-sm text-purple-600">
-                  <p className="text-xs font-bold uppercase">Donations</p>
-                  <p className="text-3xl font-black">{dashboard.donations.total}</p>
-                </div>
-              </div>
-            )}
+{dashboard && (
+  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+    {/* ... other cards ... */}
+    <div className="bg-green-50 border border-green-100 rounded-2xl p-4 shadow-sm text-green-600">
+      <p className="text-xs font-bold uppercase">Recovered</p>
+      {/* FIXED: Use liveAnalytics.profit here too */}
+      <p className="text-3xl font-black">₹{Math.round(liveAnalytics.profit)}</p>
+    </div>
+    <div className="bg-purple-50 border border-purple-100 rounded-2xl p-4 shadow-sm text-purple-600">
+      <p className="text-xs font-bold uppercase">Donations</p>
+      {/* FIXED: Use liveAnalytics.count here too */}
+      <p className="text-3xl font-black">{liveAnalytics.count}</p>
+    </div>
+  </div>
+)}
 
             {/* Discount Actions */}
             <div className="flex flex-wrap gap-4">
@@ -354,34 +377,38 @@ export default function Dashboard() {
               <p className="text-gray-500 font-medium">Track your food waste reduction impact</p>
             </header>
 
+            
             {/* High-Impact Analytics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-3xl border-l-[12px] border-blue-500 shadow-sm flex flex-col justify-center">
-                <p className="text-3xl font-black leading-tight">{dashboard.inventory.total || 0}</p>
-                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Total Products</p>
-              </div>
-              <div className="bg-white p-6 rounded-3xl border-l-[12px] border-green-500 shadow-sm flex flex-col justify-center">
-                <p className="text-3xl font-black leading-tight">{dashboard.inventory.discounted || 0}</p>
-                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Items Discounted</p>
-              </div>
-              <div className="bg-white p-6 rounded-3xl border-l-[12px] border-purple-500 shadow-sm flex flex-col justify-center">
-                <p className="text-3xl font-black leading-tight">{dashboard.donations.donatedThisWeek || 0}</p>
-                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Donated This Week</p>
-              </div>
-              <div className="bg-white p-6 rounded-3xl border-l-[12px] border-yellow-500 shadow-sm flex flex-col justify-center">
-                <p className="text-3xl font-black leading-tight">₹{Math.round(dashboard.donations.revenueRecovered || 0)}</p>
-                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Profit Recovered</p>
-              </div>
-              <div className="bg-white p-6 rounded-3xl border-l-[12px] border-cyan-500 shadow-sm flex flex-col justify-center">
-                <p className="text-3xl font-black leading-tight">{dashboard.donations.wastePreventedKg || 0} kg</p>
-                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Waste Prevented</p>
-              </div>
-              <div className="bg-white p-6 rounded-3xl border-l-[12px] border-emerald-500 shadow-sm flex flex-col justify-center">
-                <p className="text-3xl font-black leading-tight">{dashboard.donations.co2SavedKg || 0} kg</p>
-                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Carbon Footprint Saved</p>
-              </div>
-            </div>
-
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+  <div className="bg-white p-6 rounded-3xl border-l-[12px] border-blue-500 shadow-sm flex flex-col justify-center">
+    <p className="text-3xl font-black leading-tight">{products.length}</p>
+    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Total Products</p>
+  </div>
+  <div className="bg-white p-6 rounded-3xl border-l-[12px] border-green-500 shadow-sm flex flex-col justify-center">
+    <p className="text-3xl font-black leading-tight">{products.filter(p => p.isDiscounted).length}</p>
+    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Items Discounted</p>
+  </div>
+  <div className="bg-white p-6 rounded-3xl border-l-[12px] border-purple-500 shadow-sm flex flex-col justify-center">
+    {/* FIXED: Using liveAnalytics.count */}
+    <p className="text-3xl font-black leading-tight">{liveAnalytics.count}</p>
+    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Donated This Week</p>
+  </div>
+  <div className="bg-white p-6 rounded-3xl border-l-[12px] border-yellow-500 shadow-sm flex flex-col justify-center">
+    {/* FIXED: Using liveAnalytics.profit */}
+    <p className="text-3xl font-black leading-tight">₹{Math.round(liveAnalytics.profit)}</p>
+    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Profit Recovered</p>
+  </div>
+  <div className="bg-white p-6 rounded-3xl border-l-[12px] border-cyan-500 shadow-sm flex flex-col justify-center">
+    {/* FIXED: Using liveAnalytics.wasteKg */}
+    <p className="text-3xl font-black leading-tight">{liveAnalytics.wasteKg.toFixed(1)} kg</p>
+    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Waste Prevented</p>
+  </div>
+  <div className="bg-white p-6 rounded-3xl border-l-[12px] border-emerald-500 shadow-sm flex flex-col justify-center">
+    {/* FIXED: Using liveAnalytics.co2Kg */}
+    <p className="text-3xl font-black leading-tight">{liveAnalytics.co2Kg.toFixed(1)} kg</p>
+    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Carbon Footprint Saved</p>
+  </div>
+</div>
             {/* Graphical Insights (Manager Charts) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="bg-white p-10 rounded-[45px] shadow-sm border border-gray-100">
