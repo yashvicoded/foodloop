@@ -6,7 +6,7 @@ import { getAuth } from 'firebase/auth';
 const API_BASE_URL =
   (import.meta as any).env?.VITE_API_URL ||
   (import.meta as any).env?.REACT_APP_API_URL ||
-  'http://192.168.29.21:5000/api';
+  'http://localhost:5000/api';
 
   
 

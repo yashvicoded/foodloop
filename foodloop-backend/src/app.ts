@@ -30,7 +30,7 @@ app.use(
 );
 
 // Handle Pre-flight OPTIONS requests
-app.options('*', cors());
+app.options('*path', cors());
 
 // 4. PARSERS (Translates incoming data so your code can read it)
 app.use(express.json({ limit: '10kb' })); 

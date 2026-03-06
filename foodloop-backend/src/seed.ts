@@ -29,8 +29,9 @@ const products = [
     { name: 'Apples 1kg', category: 'Fresh Produce', originalPrice: 150, quantity: 5, expiryDays: 14 }, // NORMAL
     { name: 'Canned Beans', category: 'Canned', originalPrice: 40, quantity: 20, expiryDays: 30 },      // NORMAL
     { name: 'Frozen Peas', category: 'Frozen', originalPrice: 90, quantity: 15, expiryDays: 45 },      // NORMAL
-    { name: 'Bagels 6-Pack', category: 'Bakery', originalPrice: 110, quantity: 7, expiryDays: 3 },      // WARNING
-    { name: 'Strawberries Box', category: 'Fresh Produce', originalPrice: 250, quantity: 6, expiryDays: 5 } // WARNING
+    { name: 'Cheese slices', category: 'Bakery', originalPrice: 50, quantity: 10, expiryDays: 9 },      // WARNING
+    { name: 'Strawberries Box', category: 'Fresh Produce', originalPrice: 250, quantity: 56, expiryDays: 5 } // WARNING
+
 ];
 
 async function seedData() {
